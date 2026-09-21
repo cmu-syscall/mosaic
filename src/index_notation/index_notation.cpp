@@ -2295,7 +2295,8 @@ IndexStmt IndexStmt::concretizeAccelerated(const std::vector<FunctionInterface>&
     stmt = makeReductionNotation(stmt);
   }
 
-  stmt = autoAccelerate(stmt, functionInterface)[0];
+  std::vector<IndexStmt> stmts =  autoAccelerate(stmt, functionInterface);
+  stmt = stmts[0];
 
   if (isReductionNotation(stmt)) {
     stmt = makeConcreteNotation(stmt);
@@ -4646,12 +4647,84 @@ IndexStmt IndexStmt::accelerate(FunctionInterface functionInterface, IndexExpr e
   return stmt; 
 }
 
+IndexExpr IndexStmt::tryIndicesConstant(AcceleratorExpr toMatch, IndexExpr expr, bool& success) const {
+  
+  // The operator pattern of toMatch and expr must be the same.
+  for (auto matchingTensor: getMatchingTensors(expr, toMatch)){
+    if (isa<Access>(matchingTensor.first) && isa<AcceleratorAccess>(matchingTensor.second)){
+      Access access = to<Access>(matchingTensor.first);
+      AcceleratorAccess accelAccess = to<AcceleratorAccess>(matchingTensor.second);
+
+      if (access.getTensorVar().getOrder() <= accelAccess.getTensorObject().getOrder()){
+        success = false;
+        return IndexExpr();
+      }
+  
+    }
+    if (isa<Literal>(matchingTensor.first) && isa<AcceleratorAccess>(matchingTensor.second)){
+      success = false;
+      return IndexExpr();
+    }
+  }
+
+  success = true;
+  return expr;
+
+}
+
+IndexExpr IndexStmt::tryPromotion(AcceleratorExpr toMatch, IndexExpr expr, bool& success) const{
+
+  // The operator pattern of toMatch and expr must be the same.
+  for (auto matchingTensor: getMatchingTensors(expr, toMatch)){
+    if (isa<Access>(matchingTensor.first) && isa<AcceleratorAccess>(matchingTensor.second)){
+      Access access = to<Access>(matchingTensor.first);
+      AcceleratorAccess accelAccess = to<AcceleratorAccess>(matchingTensor.second);
+
+      if (access.getTensorVar().getOrder() >= accelAccess.getTensorObject().getOrder()){
+        success = false;
+        return IndexExpr();
+      }
+  
+    }
+    if (isa<Access>(matchingTensor.first) && isa<AcceleratorLiteral>(matchingTensor.second)){
+      success = false;
+      return IndexExpr();
+    }
+  }
+  success = true;
+  return expr;
+}
 
 
 std::vector<IndexStmt> generateEquivalentStmts(IndexStmt stmt){
   std::map<IndexExpr, std::vector<IndexExpr>> exprToreplace;
   std::vector<IndexStmt>  possibleRewrites;
+  
   addIdentityRewrite(stmt, exprToreplace);
+  addCommutativityRewrite(stmt, exprToreplace);
+  addDistributivityRewrites(stmt, exprToreplace);
+  takeCommonTermsOut(stmt, exprToreplace); 
+
+
+  for (auto const& it : exprToreplace){
+    for (auto expr: it.second){
+      std::map<IndexExpr, IndexExpr> substitution;
+      substitution[it.first] = expr;
+      possibleRewrites.push_back(replace(stmt, substitution));
+    }
+  }
+
+  return possibleRewrites;
+
+}
+
+
+std::vector<IndexStmt> generateEquivalentStmts(IndexStmt stmt, bool distinguish, bool identity){
+  std::map<IndexExpr, std::vector<IndexExpr>> exprToreplace;
+  std::vector<IndexStmt>  possibleRewrites;
+  // if (identity){
+    addIdentityRewrite(stmt, exprToreplace);
+  // }
   addCommutativityRewrite(stmt, exprToreplace);
   addDistributivityRewrites(stmt, exprToreplace);
   takeCommonTermsOut(stmt, exprToreplace); 
@@ -4678,7 +4751,13 @@ std::vector<IndexStmt> generateEquivalentStmts(IndexStmt stmt, int depth){
   for (int j = 0; j < depth; j++){
     int current_size = possibleRewrites.size();
     for (; indexRewritesNotExplored < current_size; indexRewritesNotExplored++){
-      std::vector<IndexStmt> rewritesGenerated = generateEquivalentStmts(possibleRewrites[indexRewritesNotExplored]);
+      std::vector<IndexStmt> rewritesGenerated;
+      if (depth <= 2){
+        rewritesGenerated = generateEquivalentStmts(possibleRewrites[indexRewritesNotExplored], true, true);
+      }
+      else{
+       rewritesGenerated = generateEquivalentStmts(possibleRewrites[indexRewritesNotExplored], true, false);
+      }
       possibleRewrites.insert(possibleRewrites.end(), rewritesGenerated.begin(), rewritesGenerated.end());
     }
    
@@ -4687,9 +4766,44 @@ std::vector<IndexStmt> generateEquivalentStmts(IndexStmt stmt, int depth){
   return possibleRewrites;
 }
 
-IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
+static void makeCombiUtil(vector<vector<int> >& ans,
+    vector<int>& tmp, int n, int left, int k)
+{
+    // Pushing this vector to a vector of vector
+    if (k == 0) {
+        ans.push_back(tmp);
+        return;
+    }
+ 
+    // i iterates from left to n. First time
+    // left will be 1
+    for (int i = left; i <= n; ++i)
+    {
+        tmp.push_back(i);
+        makeCombiUtil(ans, tmp, n, i + 1, k - 1);
+ 
+        // Popping out last inserted element
+        // from the vector
+        tmp.pop_back();
+    }
+}
+ 
+// Prints all combinations of size k of numbers
+// from 1 to n.
+static vector<vector<int> > makeCombi(int n, int k)
+{
+    vector<vector<int> > ans;
+    vector<int> tmp;
+    makeCombiUtil(ans, tmp, n, 1, k);
+    return ans;
+}
+
+IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces, std::set<std::pair<std::string, std::string>>& expressions) const{
 
   std::stack<std::tuple<Access, ConcreteAccelerateCodeGenerator, FunctionInterface, ArgumentMap>> varCodeGen;
+
+  std::set<std::pair<std::string, std::string>> scheduleBindingsForPrinting; // For Printing/Inspection
+
   // std::map<ConcreteAccelerateCodeGenerator, FunctionInterface> abstractInterface;
 
   if (!isa<Assignment>(stmt)) {
@@ -4711,26 +4825,91 @@ IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionI
     ArgumentMap argumentMap;
 
     for (auto expr: matchedExprs){
+      
+      stringstream ss; 
+      ss << expr; 
+
+      if (expressions.count({ss.str(), descripton.getNode()->getFunctionName()})) {
+        // Inserts (sub-expression, library function) pair into printing set:
+        scheduleBindingsForPrinting.insert({ss.str(), descripton.getNode()->getFunctionName()}); 
+
+        continue;
+      }
+
       argumentMap = hasPreciseMatch(expr, reduxRefStmt.getRhs());
       if (argumentMap.possible){
+        expressions.insert({ss.str(), descripton.getNode()->getFunctionName()});
+        // Inserts (sub-expression, library function) pair into printing set:
+        scheduleBindingsForPrinting.insert({ss.str(), descripton.getNode()->getFunctionName()}); 
+
         // Generate STMT query if a constraint exists
         // True indicates that we are interested in finding tilings.
         if (descripton.getNode()->getConstraints().defined()){
           std::map<IndexVar, int> currentDims;
           for (auto entry : expr.getIndexVarDomains()){
-            currentDims[entry.first] = (int) entry.second.getSize();
+            currentDims[argumentMap.indexVars[entry.first]] = (int) entry.second.getSize();
           }
+          // std::cout << "Check" << util::join(currentDims) << std::endl;
           GenerateSMTCode condition(descripton.getNode()->getConstraints(), {}, currentDims, true);
 
           // If we cannot satisfy query even with tilings, skip.
-          if (!condition.isSat()) continue;
+          if (!condition.isSat()){
+            continue;
+          }
         }
+
+        // std::cout << descripton.getNode()->getFunctionName() << std::endl;
         auto access = replaceTemporary(stmt, expr, reduxRefStmt, argumentMap);
         std::map<IndexExpr,IndexExpr> subsitution = {{expr, access}};
         stmtRewrite =  replace(stmtRewrite, subsitution);
         auto codeGen = getConcreteCodeGenerator(expr, access, argumentMap, descripton);
-        varCodeGen.push(std::make_tuple(access, codeGen, descripton, argumentMap));
-        break;
+        // varCodeGen.push(std::make_tuple(access, codeGen, descripton, argumentMap));
+        // // break;
+        }else{
+          std::vector<IndexVar> allVars = taco::getIndexVars(expr);
+          // expressions.insert({ss.str(), descripton.getNode()->getFunctionName()});
+          bool found = false;
+
+          for (int i = 0; i < allVars.size(); i++){
+            // std::cout << "starting" << std::endl;
+            // We want to stop when we have found the minimum number of indices
+            // to hold constant.
+            auto samples = makeCombi(allVars.size(), i);
+            for (auto sample: samples){
+              std::vector<IndexVar> holdConstant;
+              for (auto s: sample){
+                holdConstant.push_back(allVars[s-1]);
+              }
+              // std::cout << util::join(holdConstant) << std::endl;
+              auto tensorVarsnew = toMatchVars(expr, holdConstant);
+              IndexExpr e = replace(expr, tensorVarsnew);
+
+              // std::cout << e << std::endl;
+              ArgumentMap argumentMapConst = hasPreciseMatch(e, reduxRefStmt.getRhs());
+              if (argumentMapConst.possible){
+                found = true;
+                expressions.insert({ss.str(), descripton.getNode()->getFunctionName()});
+                scheduleBindingsForPrinting.insert({ss.str(), descripton.getNode()->getFunctionName()});
+
+                if (descripton.getNode()->getConstraints().defined()){
+                  std::map<IndexVar, int> currentDims;
+                  for (auto entry : e.getIndexVarDomains()){
+                    currentDims[argumentMap.indexVars[entry.first]] = (int) entry.second.getSize();
+                  }
+                  // std::cout << "Check" << util::join(currentDims) << std::endl;
+                  GenerateSMTCode condition(descripton.getNode()->getConstraints(), {}, currentDims, true);
+
+                  // If we cannot satisfy query even with tilings, skip.
+                  if (!condition.isSat()){
+                    continue;
+                  }
+                }
+               }
+             }
+          if (found){
+            break;
+          }
+         }
         }
       }
   }
@@ -4743,20 +4922,87 @@ IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionI
     varCodeGen.pop();
   }
 
+  // Prints Schedule Operation:
+  std::cout << "  Operation for this Schedule:  " << std::endl;
+  std::cout << "    " << stmt << std::endl;
+
+  //Prints then clears printing set of Bindings:
+  std::cout << "  Bindings for this Schedule:   " << std::endl;
+  for (auto& binding : scheduleBindingsForPrinting) {
+    std::cout << "      " << binding.first << "  ->  " << binding.second << std::endl;
+  }
+  std::cout << "\n";
+  scheduleBindingsForPrinting.clear();
+  
   return stmtRewrite;
 }
 
-std::vector<IndexStmt> IndexStmt::autoAccelerate(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
-
-  std::vector<IndexStmt> possibleRewrites = generateEquivalentStmts(stmt, 2);
-  std::vector<IndexStmt> possibleStmts;
-  std::stack<std::tuple<Access, ConcreteAccelerateCodeGenerator, FunctionInterface, ArgumentMap>> varCodeGen;
-
-  for (int i = 0; i < possibleRewrites.size(); i++){
-      possibleStmts.push_back(helperCheckForMatches(possibleRewrites[i], functionInterfaces));
+std::vector<IndexStmt> IndexStmt::helperCheckForMatches(
+    IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const {
+  if (!isa<Assignment>(stmt)) {
+    return {stmt};
   }
 
-  return possibleStmts;
+  std::vector<IndexStmt> candidates;
+  std::set<const AbstractFunctionInterface*> visitedInterfaces;
+  for (const auto& description : functionInterfaces) {
+    const auto* interface = description.getNode();
+    taco_uassert(interface != nullptr) << "Undefined function interface";
+    if (!visitedInterfaces.insert(interface).second) {
+      continue;
+    }
+    const AcceleratorStmt reference = interface->getStmt();
+    taco_uassert(isa<AcceleratorAssignment>(reference))
+        << "Reference statement in function interface must be an assignment";
+    const auto reduction = makeReductionNotation(to<AcceleratorAssignment>(reference));
+    const auto matches = allMatchedOpPatterns(
+        to<Assignment>(stmt).getRhs(), reduction.getRhs());
+    std::vector<IndexExpr> visitedExpressions;
+    for (const auto& expression : matches) {
+      bool duplicate = false;
+      for (const auto& previous : visitedExpressions) {
+        if (equals(previous, expression)) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (duplicate) continue;
+      visitedExpressions.push_back(expression);
+
+      auto arguments = hasPreciseMatch(expression, reduction.getRhs());
+      if (!arguments.possible || !interface->checkerFunction(stmt)) continue;
+      if (interface->getConstraints().defined()) {
+        std::map<IndexVar, int> dimensions;
+        const auto domains = expression.getIndexVarDomains();
+        for (const auto& mapping : arguments.indexVars) {
+          dimensions[mapping.first] = (int)domains.at(mapping.second).getSize();
+        }
+        GenerateSMTCode condition(interface->getConstraints(), {}, dimensions, true);
+        if (!condition.isSat()) continue;
+      }
+
+      // Each alternative starts from the original statement, not an earlier binding.
+      auto workspace = replaceTemporary(stmt, expression, reduction, arguments);
+      std::map<IndexExpr, IndexExpr> substitution = {{expression, workspace}};
+      auto candidate = makeConcreteNotation(replace(stmt, substitution));
+      auto codeGen = getConcreteCodeGenerator(expression, workspace, arguments, description);
+      candidate = rewriteStmt(candidate, workspace, codeGen, description, arguments);
+      candidates.push_back(candidate);
+    }
+  }
+  if (candidates.empty()) candidates.push_back(makeConcreteNotation(stmt));
+  return candidates;
+}
+
+std::vector<IndexStmt> IndexStmt::autoAccelerate(
+    IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const {
+  const auto rewrites = generateEquivalentStmts(stmt, 3);
+  std::vector<IndexStmt> schedules = {makeConcreteNotation(stmt)};
+  for (const auto& rewrite : rewrites) {
+    auto alternatives = helperCheckForMatches(rewrite, functionInterfaces);
+    schedules.insert(schedules.end(), alternatives.begin(), alternatives.end());
+  }
+  return schedules;
 }
 
 
