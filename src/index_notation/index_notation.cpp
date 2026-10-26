@@ -4687,18 +4687,18 @@ std::vector<IndexStmt> generateEquivalentStmts(IndexStmt stmt, int depth){
   return possibleRewrites;
 }
 
-IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
-
-  std::stack<std::tuple<Access, ConcreteAccelerateCodeGenerator, FunctionInterface, ArgumentMap>> varCodeGen;
-  // std::map<ConcreteAccelerateCodeGenerator, FunctionInterface> abstractInterface;
+std::vector<IndexStmt> IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
 
   if (!isa<Assignment>(stmt)) {
     cout << "Cannot autoschedule this expression since it is not an assignment" << endl;
-    return stmt;
+    return {stmt};
   }
 
-  IndexStmt stmtRewrite = stmt;
+  std::vector<IndexStmt> candidates;
+  std::set<const AbstractFunctionInterface*> visitedInterfaces;
   for (auto descripton: functionInterfaces){
+    taco_uassert(descripton.getNode() != nullptr) << "Undefined function interface";
+    if (!visitedInterfaces.insert(descripton.getNode()).second) continue;
     AcceleratorStmt referenceStmt = descripton.getNode()->getStmt();
     
     if (!isa<AcceleratorAssignment>(referenceStmt)){
@@ -4709,8 +4709,18 @@ IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionI
     AcceleratorAssignment reduxRefStmt = makeReductionNotation(assign);
     std::vector<IndexExpr> matchedExprs = allMatchedOpPatterns(to<Assignment>(stmt).getRhs(), reduxRefStmt.getRhs());
     ArgumentMap argumentMap;
+    std::vector<IndexExpr> visitedExpressions;
 
     for (auto expr: matchedExprs){
+      bool duplicate = false;
+      for (auto previous: visitedExpressions) {
+        if (equals(previous, expr)) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (duplicate) continue;
+      visitedExpressions.push_back(expr);
       argumentMap = hasPreciseMatch(expr, reduxRefStmt.getRhs());
       if (argumentMap.possible){
         // Generate STMT query if a constraint exists
@@ -4727,33 +4737,25 @@ IndexStmt IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vector<FunctionI
         }
         auto access = replaceTemporary(stmt, expr, reduxRefStmt, argumentMap);
         std::map<IndexExpr,IndexExpr> subsitution = {{expr, access}};
-        stmtRewrite =  replace(stmtRewrite, subsitution);
+        IndexStmt stmtRewrite = makeConcreteNotation(replace(stmt, subsitution));
         auto codeGen = getConcreteCodeGenerator(expr, access, argumentMap, descripton);
-        varCodeGen.push(std::make_tuple(access, codeGen, descripton, argumentMap));
-        break;
+        candidates.push_back(rewriteStmt(stmtRewrite, access, codeGen, descripton, argumentMap));
         }
       }
   }
   
-  stmtRewrite = makeConcreteNotation(stmtRewrite);
-
-  while (!varCodeGen.empty()){
-    auto tensorCodeGen = varCodeGen.top();
-    stmtRewrite = rewriteStmt(stmtRewrite, std::get<0>(tensorCodeGen), std::get<1>(tensorCodeGen), std::get<2>(tensorCodeGen), std::get<3>(tensorCodeGen));
-    varCodeGen.pop();
-  }
-
-  return stmtRewrite;
+  if (candidates.empty()) candidates.push_back(makeConcreteNotation(stmt));
+  return candidates;
 }
 
 std::vector<IndexStmt> IndexStmt::autoAccelerate(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
 
   std::vector<IndexStmt> possibleRewrites = generateEquivalentStmts(stmt, 2);
   std::vector<IndexStmt> possibleStmts;
-  std::stack<std::tuple<Access, ConcreteAccelerateCodeGenerator, FunctionInterface, ArgumentMap>> varCodeGen;
 
   for (int i = 0; i < possibleRewrites.size(); i++){
-      possibleStmts.push_back(helperCheckForMatches(possibleRewrites[i], functionInterfaces));
+      auto candidates = helperCheckForMatches(possibleRewrites[i], functionInterfaces);
+      possibleStmts.insert(possibleStmts.end(), candidates.begin(), candidates.end());
   }
 
   return possibleStmts;
