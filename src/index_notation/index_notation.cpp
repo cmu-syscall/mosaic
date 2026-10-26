@@ -30,6 +30,7 @@
 #include "taco/ir/ir.h"
 #include "taco/codegen/module.h"
 #include "taco/tensor.h"
+#include "taco/storage/typed_value.h"
 
 #include "taco/util/name_generator.h"
 #include "taco/util/scopedset.h"
@@ -4748,6 +4749,128 @@ std::vector<IndexStmt> IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vec
   return candidates;
 }
 
+IndexStmt propagateConstants(IndexStmt stmt) {
+  bool bound = false;
+  match(stmt,
+    std::function<void(const AccelerateNode*)>([&](const AccelerateNode*) { bound = true; }),
+    std::function<void(const InterfaceCallNode*)>([&](const InterfaceCallNode*) { bound = true; }));
+  if (bound) return stmt;
+
+  struct Propagate : IndexNotationRewriter {
+    using IndexNotationRewriter::visit;
+
+    bool constant(IndexExpr expr, int value) {
+      if (!isa<Literal>(expr)) return false;
+      auto literal = to<Literal>(expr);
+      return TypedComponentVal(expr.getDataType(), literal.getValPtr()) ==
+             TypedComponentVal(expr.getDataType(), value);
+    }
+
+    bool hasCall(IndexExpr expression) {
+      bool found = false;
+      match(expression,
+        std::function<void(const CallNode*)>([&](const CallNode*) { found = true; }),
+        std::function<void(const CallIntrinsicNode*)>([&](const CallIntrinsicNode*) { found = true; }));
+      return found;
+    }
+
+    void propagate(const BinaryExprNode* op) {
+      if (!op->a.defined() || !op->b.defined()) return;
+      const IndexExpr a = op->a, b = op->b;
+      const auto type = expr.getDataType();
+      if (type.isBool()) return;
+      const bool aIsConstant = isa<Literal>(op->a), bIsConstant = isa<Literal>(op->b);
+      if (aIsConstant && bIsConstant && !isa<DivNode>(op) &&
+          op->a.getDataType() == type && op->b.getDataType() == type) {
+        auto a = to<Literal>(op->a), b = to<Literal>(op->b);
+        TypedComponentVal av(type, a.getValPtr()), bv(type, b.getValPtr()), value;
+        if (isa<AddNode>(op)) value = av + bv;
+        else if (isa<SubNode>(op)) value = av - bv;
+        else if (isa<MulNode>(op)) value = av * bv;
+        else return;
+        Literal merged = Literal::zero(type);
+        TypedComponentRef(type, merged.getValPtr()).set(value);
+        expr = merged;
+        return;
+      }
+      const bool integer = type.isInt() || type.isUInt();
+      const bool aSameType = op->a.getDataType() == type, bSameType = op->b.getDataType() == type;
+      if (isa<AddNode>(op) && (integer || type.isFloat())) {
+        if (constant(a, 0) && bSameType) expr = b;
+        else if (constant(b, 0) && aSameType) expr = a;
+      } else if (isa<SubNode>(op) && (integer || type.isFloat())) {
+        if (constant(b, 0) && aSameType) expr = a;
+        else if (integer && constant(a, 0) && bSameType) expr = -b;
+      } else if (isa<MulNode>(op)) {
+        if (!type.isComplex() && constant(a, 1) && bSameType) expr = b;
+        else if (!type.isComplex() && constant(b, 1) && aSameType) expr = a;
+        else if ((integer || type.isFloat()) && constant(a, 0) && !hasCall(b)) expr = Literal::zero(type);
+        else if ((integer || type.isFloat()) && constant(b, 0) && !hasCall(a)) expr = Literal::zero(type);
+      } else if (isa<DivNode>(op) && !type.isComplex() && constant(op->b, 1) && aSameType) {
+        expr = a;
+      }
+    }
+
+    void visit(const AddNode* op) {
+      IndexNotationRewriter::visit(op);
+      propagate(to<AddNode>(expr.ptr));
+    }
+    void visit(const SubNode* op) {
+      IndexNotationRewriter::visit(op);
+      propagate(to<SubNode>(expr.ptr));
+    }
+    void visit(const MulNode* op) {
+      IndexNotationRewriter::visit(op);
+      propagate(to<MulNode>(expr.ptr));
+    }
+    void visit(const DivNode* op) {
+      IndexNotationRewriter::visit(op);
+      propagate(to<DivNode>(expr.ptr));
+    }
+
+    void visit(const NegNode* op) {
+      IndexNotationRewriter::visit(op);
+      auto a = to<Neg>(expr).getA();
+      if (!isa<Literal>(a) || a.getDataType().isBool()) return;
+      auto literal = to<Literal>(a);
+      TypedComponentVal value(a.getDataType(), literal.getValPtr());
+      Literal merged = Literal::zero(a.getDataType());
+      TypedComponentRef(a.getDataType(), merged.getValPtr()).set(-value);
+      expr = merged;
+    }
+
+    void visit(const CallNode* op) { expr = op; }
+    void visit(const CallIntrinsicNode* op) { expr = op; }
+    void visit(const AccelerateNode* op) { stmt = op; }
+    void visit(const InterfaceCallNode* op) { stmt = op; }
+  };
+  return Propagate().rewrite(stmt);
+}
+
+static bool sameSchedule(IndexStmt a, IndexStmt b) {
+  struct Metadata : IndexNotationVisitor {
+    using IndexNotationVisitor::visit;
+    std::vector<const void*> opaque;
+    std::vector<MergeStrategy> merges;
+    void visit(const AccelerateNode* op) { opaque.push_back(op); }
+    void visit(const InterfaceCallNode* op) { opaque.push_back(op); }
+    void visit(const CallNode* op) { opaque.push_back(op); }
+    void visit(const CallIntrinsicNode* op) { opaque.push_back(op); }
+    void visit(const DimReductionNode* op) { opaque.push_back(op); }
+    void visit(const ForallManyNode* op) { opaque.push_back(op); }
+    void visit(const AssembleNode* op) { opaque.push_back(op); }
+    void visit(const ForallNode* op) {
+      merges.push_back(op->merge_strategy);
+      IndexNotationVisitor::visit(op);
+    }
+  };
+  Metadata left, right;
+  a.accept(&left);
+  b.accept(&right);
+  // equals does not compare library code generators or every scheduling annotation.
+  return left.opaque == right.opaque && left.merges == right.merges && equals(a, b);
+}
+
 std::vector<IndexStmt> IndexStmt::autoAccelerate(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const{
 
   std::vector<IndexStmt> possibleRewrites = generateEquivalentStmts(stmt, 2);
@@ -4758,7 +4881,14 @@ std::vector<IndexStmt> IndexStmt::autoAccelerate(IndexStmt stmt, std::vector<Fun
       possibleStmts.insert(possibleStmts.end(), candidates.begin(), candidates.end());
   }
 
-  return possibleStmts;
+  std::vector<IndexStmt> simplified;
+  for (auto candidate : possibleStmts) {
+    candidate = propagateConstants(candidate);
+    if (std::none_of(simplified.begin(), simplified.end(),
+                    [&](IndexStmt previous) { return sameSchedule(previous, candidate); }))
+      simplified.push_back(candidate);
+  }
+  return simplified;
 }
 
 

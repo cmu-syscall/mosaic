@@ -219,6 +219,9 @@ bool equals(IndexExpr, IndexExpr);
 
 std::vector<IndexStmt> generateEquivalentStmts(IndexStmt);
 
+/// Fold constants and scalar identities; schedules containing library bindings are unchanged.
+IndexStmt propagateConstants(IndexStmt);
+
 /// Construct and returns an expression that negates this expression.
 /// ```
 /// A(i,j) = -B(i,j);

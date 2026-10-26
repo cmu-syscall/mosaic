@@ -16,4 +16,9 @@ target_link_libraries(taco-bench benchmark::benchmark)
 target_link_libraries(taco-bench taco)
 target_link_libraries(taco-bench benchmark_main)
 
+foreach(KERNEL gemm spmm sddmm)
+  add_executable(taco-multi-${KERNEL} multi-bench/bench_${KERNEL}.cpp)
+  target_link_libraries(taco-multi-${KERNEL} taco benchmark::benchmark)
+endforeach()
+
 
