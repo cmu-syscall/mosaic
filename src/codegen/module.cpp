@@ -169,7 +169,7 @@ string Module::compile() {
   // we need to include the correct one depending on what 
   // we are compiling 
 
-  cmd += includePath + " " + libPath + " " + dynamiclibFiles;
+  cmd += " " + includePath + " " + libPath + " " + dynamiclibFiles;
 
 
   // if (gsl_compile){
