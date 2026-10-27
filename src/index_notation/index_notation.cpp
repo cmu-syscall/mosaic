@@ -4749,7 +4749,7 @@ std::vector<IndexStmt> IndexStmt::helperCheckForMatches(IndexStmt stmt, std::vec
   return candidates;
 }
 
-IndexStmt propagateConstants(IndexStmt stmt) {
+IndexStmt helperSimplifyConstants(IndexStmt stmt) {
   bool bound = false;
   match(stmt,
     std::function<void(const AccelerateNode*)>([&](const AccelerateNode*) { bound = true; }),
@@ -4883,7 +4883,7 @@ std::vector<IndexStmt> IndexStmt::autoAccelerate(IndexStmt stmt, std::vector<Fun
 
   std::vector<IndexStmt> simplified;
   for (auto candidate : possibleStmts) {
-    candidate = propagateConstants(candidate);
+    candidate = helperSimplifyConstants(candidate);
     if (std::none_of(simplified.begin(), simplified.end(),
                     [&](IndexStmt previous) { return sameSchedule(previous, candidate); }))
       simplified.push_back(candidate);
