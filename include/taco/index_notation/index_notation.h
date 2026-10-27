@@ -219,6 +219,9 @@ bool equals(IndexExpr, IndexExpr);
 
 std::vector<IndexStmt> generateEquivalentStmts(IndexStmt);
 
+/// Fold constants and scalar identities; schedules containing library bindings are unchanged.
+IndexStmt helperSimplifyConstants(IndexStmt);
+
 /// Construct and returns an expression that negates this expression.
 /// ```
 /// A(i,j) = -B(i,j);
@@ -615,7 +618,7 @@ public:
   IndexStmt concretizeAccelerated(const std::vector<FunctionInterface>& functionInterface) const;
 
   std::vector<IndexStmt> autoAccelerate(IndexStmt stmt, std::vector<FunctionInterface> functionInterface) const;
-  IndexStmt helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const;
+  std::vector<IndexStmt> helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const;
 
   /// Takes any index notation and concretizes unknowns to make it concrete notation
   /// given a Provenance Graph of indexVars
