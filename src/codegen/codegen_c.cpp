@@ -10,6 +10,7 @@
 #include "taco/error.h"
 #include "taco/util/strings.h"
 #include "taco/util/collections.h"
+#include "taco/util/env.h"
 
 using namespace std;
 
@@ -35,20 +36,9 @@ const string cHeaders =
   "#include <math.h>\n"
   "#include <complex.h>\n"
   "#include <string.h>\n"
-  "#include <immintrin.h>\n" 
-
-  + std::string(getenv("INCLUDE_HEADERS")) + "\n" +
-  // "#include \"cblas.h\"\n"
-  // "#include \"tblis.h\"\n"
-  // "#include \"gsl/gsl_vector.h\"\n"
-  // "#include \"gsl/gsl_blas.h\"\n"
-  // "#include \"tensor.h\"\n"
-  // "#include \"mkl.h\"\n"
-  // "#include <cuda_runtime_api.h>\n"
-  // "#include <cusparse.h>\n"
-  // "#include <time.h>\n"
- 
-  // "#include <Accelerate/Accelerate.h>\n"
+  "#if defined(__i386__) || defined(__x86_64__)\n"
+  "#include <immintrin.h>\n"
+  "#endif\n"
   "#if _OPENMP\n"
   "#include <omp.h>\n"
   "#endif\n"
@@ -178,6 +168,7 @@ const string cHeaders =
   "}\n"
   "int lC = 0;\n"
   "int kB = 0;\n"
+  + util::getFromEnv("INCLUDE_HEADERS", "") + "\n" +
   "#endif\n";
 } // anonymous namespace
 
