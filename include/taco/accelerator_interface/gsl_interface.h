@@ -225,12 +225,21 @@ class GSLMM : public AbstractFunctionInterface{
             taco::TransferLoad set_gsl_mat_data_row_major_s("set_gsl_mat_data_row_major_s", "void");
 
             return {
-                a = gsl_matrix_float_alloc(Dim(i), Dim(j)),
-                b = gsl_matrix_float_alloc(Dim(j), Dim(k)),
-                mat = gsl_matrix_float_alloc(Dim(i), Dim(k)),
+                a = gsl_matrix_float_alloc(Dim(j), Dim(k)),
+                b = gsl_matrix_float_alloc(Dim(i), Dim(k)),
+                mat = gsl_matrix_float_alloc(Dim(i), Dim(j)),
                 set_gsl_mat_data_row_major_s(mat, x),
                 set_gsl_mat_data_row_major_s(a, y),
                 set_gsl_mat_data_row_major_s(b, z)
+            };
+        }
+
+        std::vector<Argument> callAfter() const override {
+            taco::TransferLoad gsl_matrix_float_free("gsl_matrix_float_free", "void");
+            return {
+                gsl_matrix_float_free(mat),
+                gsl_matrix_float_free(a),
+                gsl_matrix_float_free(b)
             };
         }
 
@@ -301,4 +310,4 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
 };
 
 
-#endif 
+#endif

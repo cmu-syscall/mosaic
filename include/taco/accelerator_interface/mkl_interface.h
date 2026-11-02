@@ -86,7 +86,7 @@ public:
                                                     new DimArg(i), 
                                                     new TensorName(x),
                                                     new TensorName(y),
-                                                    new TensorName(z),
+                                                    new TensorObjectArg(z),
                                                 };}
 
         std::string getReturnType() const override {return "void";}
@@ -210,4 +210,4 @@ class MklAdd : public AbstractFunctionInterface{
         IndexVar j;
 };
 
-#endif 
+#endif
