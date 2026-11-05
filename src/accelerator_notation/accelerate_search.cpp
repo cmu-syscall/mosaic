@@ -251,7 +251,10 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
                          return false;
                     }
 
-                    tensors[node2->tensorObject] = node1->tensorVar;
+                    auto tensor = tensors.emplace(node2->tensorObject, node1->tensorVar);
+                    if (!tensor.second && tensor.first->second != node1->tensorVar) {
+                        return ArgumentMap(false);
+                    }
 
                     for (size_t i = 0; i < node2->indexVars.size(); i++){
                         indexVars[node2->indexVars[i]] = node1->indexVars[i];
