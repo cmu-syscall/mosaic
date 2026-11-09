@@ -95,7 +95,7 @@ class Sgemv : public AbstractFunctionInterface{
                                                     new DimArg(j), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new TensorObjectArg(x), 
-                                                    new DimArg(i),
+                                                    new DimArg(j),
                                                     new TensorObjectArg(s), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
@@ -134,12 +134,12 @@ class Sgemm : public AbstractFunctionInterface{
                                                     new DimArg(j), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new TensorObjectArg(x), 
-                                                    new DimArg(i), 
-                                                    new TensorObjectArg(y), 
-                                                    new DimArg(j), 
+                                                    new DimArg(j),
+                                                    new TensorObjectArg(y),
+                                                    new DimArg(k),
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new TensorObjectArg(z), 
-                                                    new DimArg(i), 
+                                                    new DimArg(k),
                                                 }; }
 
         std::string getReturnType() const override {return "void";}
@@ -177,12 +177,12 @@ class MatrixMultiply : public AbstractFunctionInterface{
                                                     new DimArg(j), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new TensorObjectArg(x), 
-                                                    new DimArg(i), 
-                                                    new TensorObjectArg(y), 
-                                                    new DimArg(j), 
+                                                    new DimArg(j),
+                                                    new TensorObjectArg(y),
+                                                    new DimArg(k),
                                                     new LiteralArg(Datatype(taco::UInt32), 0),
                                                     new TensorObjectArg(z), 
-                                                    new DimArg(i), 
+                                                    new DimArg(k),
                                                 }; }
 
         std::string getReturnType() const override {return "void";}
@@ -257,7 +257,7 @@ class CblasGemv : public AbstractFunctionInterface{
                                                     new DimArg(j), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new TensorObjectArg(x), 
-                                                    new DimArg(i),
+                                                    new DimArg(j),
                                                     new TensorObjectArg(s), 
                                                     new LiteralArg(Datatype(taco::UInt32), 1),
                                                     new LiteralArg(Datatype(taco::UInt32), 0),
@@ -312,4 +312,4 @@ class CblasSymmetricGemV : public AbstractFunctionInterface{
 
 
 
-#endif 
+#endif
