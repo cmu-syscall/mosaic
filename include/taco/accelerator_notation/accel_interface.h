@@ -158,6 +158,7 @@ struct  DeclVar {
 struct  AddrTensorVar : public TransferTypeArgs{
     explicit AddrTensorVar(const TensorObject& var): TransferTypeArgs(TENSOR_ADDR), var(var) {}
     explicit AddrTensorVar(const TensorVar& tvar): TransferTypeArgs(TENSOR_ADDR), tvar(tvar) {}
+    std::ostream& print(std::ostream& os) const override;
     TensorObject var;
     TensorVar tvar;
 
@@ -168,6 +169,7 @@ struct  AddrTensorVar : public TransferTypeArgs{
 struct  TensorName : public TransferTypeArgs{
     explicit TensorName(const TensorObject& var): TransferTypeArgs(TENSOR_NAME), var(var) {}
     explicit TensorName(const TensorVar& tvar): TransferTypeArgs(TENSOR_NAME), tvar(tvar) {}
+    std::ostream& print(std::ostream& os) const override;
     TensorObject var;
     TensorVar tvar;
 
@@ -233,6 +235,7 @@ struct LiteralArg : public TransferTypeArgs{
 // it into an external function.
 struct CastArg : public TransferTypeArgs{
   CastArg(const Argument& argument, const std::string& cast) : TransferTypeArgs(CAST), argument(argument), cast(cast) {}
+  std::ostream& print(std::ostream& os) const override;
  
   Argument argument;
   std::string cast;

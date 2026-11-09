@@ -6,6 +6,8 @@
 #include "taco/accelerator_notation/accel_interface.h"
 #include "taco/accelerator_notation/accelerator_notation.h"
 
+using namespace taco;
+
 class TblisMultiply : public AbstractFunctionInterface{
     public: 
         TblisMultiply() : 
