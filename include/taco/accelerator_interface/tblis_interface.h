@@ -17,9 +17,9 @@ class TblisMultiply : public AbstractFunctionInterface{
                     i(IndexVar()),
                     j(IndexVar()),
                     k(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i, k) = x(i, j) * y(j, k);}
         std::vector<Argument> getArguments() const override {
@@ -80,9 +80,9 @@ class TblisTTM : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return x(i, j, k) = y(i, j, l) * z(k, l);}
         std::vector<Argument> getArguments() const override {
@@ -134,9 +134,9 @@ class TblisDot : public AbstractFunctionInterface{
                     y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                     s(TensorObject(Type(taco::Float32))),
                     i(IndexVar()),
-                    var(DeclVar("tblis_vector", "var1")),
-                    var2(DeclVar("tblis_vector", "var2")),
-                    result(DeclVar("tblis_scalar", "result")) {};
+                    var(DeclVar("tblis_vector")),
+                    var2(DeclVar("tblis_vector")),
+                    result(DeclVar("tblis_scalar")) {};
 
         AcceleratorStmt getStmt() const override {return s = x(i) * y(i);}
         std::vector<Argument> getArguments() const override {
@@ -180,9 +180,9 @@ class TblisSaxpy : public AbstractFunctionInterface{
                     y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                     s(TensorObject(Type(taco::Float32))),
                     i(IndexVar()),
-                    var(DeclVar("tblis_vector", "var1")),
-                    var2(DeclVar("tblis_vector", "var2")),
-                    result(DeclVar("tblis_scalar", "result")) {};
+                    var(DeclVar("tblis_vector")),
+                    var2(DeclVar("tblis_vector")),
+                    result(DeclVar("tblis_scalar")) {};
 
         AcceleratorStmt getStmt() const override {return y(i) = x(i) + y(i);}
         std::vector<Argument> getArguments() const override {
@@ -224,9 +224,9 @@ class TblisPlus : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return x(i, j, k) = y(i, j, k) + x(i, j, k);}
         std::vector<Argument> getArguments() const override {
@@ -275,9 +275,9 @@ class TblisGemv : public AbstractFunctionInterface{
                     i(IndexVar()),
                     j(IndexVar()),
                     k(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i) = x(i, j) * y(j);}
         std::vector<Argument> getArguments() const override {
@@ -339,9 +339,9 @@ class TblisTTV : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i, j) = x(i, j, k) * y(k);}
         std::vector<Argument> getArguments() const override {
