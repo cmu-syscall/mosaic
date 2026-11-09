@@ -1,4 +1,5 @@
 #include <functional>
+#include "taco/storage/typed_value.h"
 
 #include "taco/index_notation/index_notation_visitor.h"
 #include "taco/index_notation/index_notation_rewriter.h"
@@ -67,6 +68,12 @@ static std::vector<OpTypes> getOpPattern(IndexExpr e){
     std::vector<OpTypes> opPattern;
 
     match(e,
+        std::function<void(const AccessNode*)>([&](const AccessNode*) {
+            opPattern.push_back(ACCESS_OP);
+        }),
+        std::function<void(const LiteralNode*)>([&](const LiteralNode*) {
+            opPattern.push_back(LITERAL_OP);
+        }),
         std::function<void(const AddNode*, Matcher*)>([&](const AddNode* op, Matcher* ctx) {
             opPattern.push_back(ADD);
             ctx->match(op->a);
@@ -110,6 +117,12 @@ static std::vector<OpTypes> getOpPattern(AcceleratorExpr e){
     std::vector<OpTypes> opPattern;
 
     acceleratorMatch(e,
+        std::function<void(const AcceleratorAccessNode*)>([&](const AcceleratorAccessNode*) {
+            opPattern.push_back(ACCESS_OP);
+        }),
+        std::function<void(const AcceleratorLiteralNode*)>([&](const AcceleratorLiteralNode*) {
+            opPattern.push_back(LITERAL_OP);
+        }),
         std::function<void(const AcceleratorAddNode*, AcceleratorMatcher*)>([&](const AcceleratorAddNode* op, AcceleratorMatcher* ctx) {
             opPattern.push_back(ADD);
             ctx->acceleratorMatch(op->a);
@@ -169,8 +182,12 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
         return ArgumentMap(false);
     }
 
+    std::vector<IndexVar> reductions, referenceReductions;
     auto PrecisePatternIndexExpr = [&](IndexExpr e, std::vector<EndNodeTypes>& precisePattern, std::vector<IndexExpr>& nodes) {
         match(e,
+            std::function<void(const ReductionNode*)>([&](const ReductionNode* op) {
+                reductions.push_back(op->var);
+            }),
             std::function<void(const AccessNode*, Matcher*)>([&](const AccessNode* op, Matcher* ctx) {
                 precisePattern.push_back(ACCESS);
                 nodes.push_back(op);
@@ -184,6 +201,9 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
 
     auto PrecisePatternAccelExpr = [&](AcceleratorExpr e, std::vector<EndNodeTypes>& precisePattern, std::vector<AcceleratorExpr>& nodes) {
         acceleratorMatch(e,
+            std::function<void(const AcceleratorReductionNode*)>([&](const AcceleratorReductionNode* op) {
+                referenceReductions.push_back(op->var);
+            }),
             std::function<void(const AcceleratorAccessNode*, AcceleratorMatcher*)>([&](const AcceleratorAccessNode* op, AcceleratorMatcher* ctx) {
                 precisePattern.push_back(ACCESS);
                 nodes.push_back(op);
@@ -203,6 +223,7 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
 
     std::map<TensorObject, TensorVar> tensors; 
     std::map<IndexVar, IndexVar> indexVars; 
+    std::map<IndexVar, IndexVar> reverseIndexVars;
 
     PrecisePatternIndexExpr(e1, e1Pattern, e1Nodes);
     PrecisePatternAccelExpr(e2, e2Pattern, e2Nodes);
@@ -252,12 +273,15 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
                     }
 
                     auto tensor = tensors.emplace(node2->tensorObject, node1->tensorVar);
-                    if (!tensor.second && tensor.first->second != node1->tensorVar) {
+                    if (!tensor.second && tensor.first->second != node1->tensorVar)
                         return ArgumentMap(false);
-                    }
 
                     for (size_t i = 0; i < node2->indexVars.size(); i++){
-                        indexVars[node2->indexVars[i]] = node1->indexVars[i];
+                        auto forward = indexVars.emplace(node2->indexVars[i], node1->indexVars[i]);
+                        auto reverse = reverseIndexVars.emplace(node1->indexVars[i], node2->indexVars[i]);
+                        if ((!forward.second && forward.first->second != node1->indexVars[i]) ||
+                            (!reverse.second && reverse.first->second != node2->indexVars[i]))
+                            return ArgumentMap(false);
                     }
 
                     break;
@@ -268,6 +292,12 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
                     if (e1Nodes[i].getDataType() != e2Nodes[i].getDataType()){
                         return ArgumentMap(false);
                     }
+                    auto actual = to<Literal>(e1Nodes[i]);
+                    auto reference = to<AcceleratorLiteral>(e2Nodes[i]);
+                    const auto type = actual.getDataType();
+                    if (!(TypedComponentVal(type, actual.getValPtr()) ==
+                          TypedComponentVal(type, reference.getValPtr())))
+                        return ArgumentMap(false);
                     break;
                 }
             default: 
@@ -275,6 +305,12 @@ ArgumentMap hasPreciseMatch(IndexExpr e1, AcceleratorExpr e2){
         }
     }
 
+    if (reductions.size() != referenceReductions.size()) return ArgumentMap(false);
+    for (size_t i = 0; i < reductions.size(); ++i) {
+        auto mapped = indexVars.find(referenceReductions[i]);
+        if (mapped == indexVars.end() || mapped->second != reductions[i])
+            return ArgumentMap(false);
+    }
     return ArgumentMap(tensors, indexVars, true);
 
 }

@@ -8,7 +8,7 @@
 namespace taco {
 
 
-enum OpTypes {ADD, SUB, NEG, MUL, SQRT, DIV, REDUX};
+enum OpTypes {ADD, SUB, NEG, MUL, SQRT, DIV, REDUX, ACCESS_OP, LITERAL_OP};
 enum EndNodeTypes {ACCESS, LITERALNODE, INDEX_VAR};
 
 /// Describes how to go go from 
