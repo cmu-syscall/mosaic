@@ -251,7 +251,7 @@ LowererImplImperative::lower(IndexStmt stmt, string name,
   vector<TensorVar> results = getResults(stmt);
   vector<TensorVar> arguments;
   if (assignment.defined()){
-    arguments = getArguments(assignment);
+    arguments = getArguments(makeConcreteNotation(assignment));
   }else{
     arguments = getArguments(stmt);
   }

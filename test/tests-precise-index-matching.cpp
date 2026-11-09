@@ -1,5 +1,6 @@
 #include "test.h"
 #include "taco/tensor.h"
+#include "taco/accelerator_interface/cblas_interface.h"
 #include "taco/accelerator_interface/tblis_interface.h"
 #include "taco/accelerator_notation/accelerate_search.h"
 
