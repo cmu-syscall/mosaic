@@ -1,6 +1,7 @@
 #include "taco/accelerator_notation/accel_interface.h"
 #include "taco/index_notation/index_notation_nodes.h"
 #include "taco/tensor.h"
+#include <cstring>
 
 using namespace std; 
 
@@ -69,13 +70,13 @@ std::ostream& irExprArg::print(std::ostream& os) const{
 }
 
 std::ostream& DimList::print(std::ostream& os) const{
-  os << t << ".Dim[]";
+  os << (tvar.defined() ? tvar.getName() : t.getName()) << ".Dim[]";
   return os;
 }
 
 
 std::ostream& DataArray::print(std::ostream& os) const{
-  os << t << ".Data[]";
+  os << (tvar.defined() ? tvar.getName() : t.getName()) << ".Data[]";
   return os;
 }
 
@@ -95,6 +96,18 @@ std::ostream& TensorArg::print(std::ostream& os) const{
   return os;
 }
 
+std::ostream& AddrTensorVar::print(std::ostream& os) const {
+  return os << "&" << (tvar.defined() ? tvar.getName() : var.getName());
+}
+
+std::ostream& TensorName::print(std::ostream& os) const {
+  return os << (tvar.defined() ? tvar.getName() : var.getName());
+}
+
+std::ostream& CastArg::print(std::ostream& os) const {
+  return os << "(" << cast << ")" << argument;
+}
+
 std::ostream& AddrDeclVarArg::print(std::ostream& os) const{
   os << "&" << var.getName();
   return os;
@@ -107,16 +120,9 @@ std::ostream& DeclVarArg::print(std::ostream& os) const{
 
 
 std::ostream& LiteralArg::print(std::ostream& os) const{
-  
-
-  switch (datatype.getKind()){
-    case Datatype::UInt32:
-      os << this->getVal<int32_t>();
-      break;
-    default: 
-      os << "Add CASE!";
-  }
-  return os;
+  Literal literal = Literal::zero(datatype);
+  std::memcpy(literal.getValPtr(), val, datatype.getNumBytes());
+  return os << literal;
 }
 
 
