@@ -35,12 +35,10 @@ class TblisMultiply : public AbstractFunctionInterface{
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
-                                taco::TransferLoad setScalar("tblis_set_tensor_scalar_s", "void");
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
                                 return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(x), 2,  DataArray(x)),
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(y), 2,  DataArray(y)), 
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(z), 2, DataArray(z)),
-                                         setScalar(AddrDeclVarArg(result), 0),
                                          };
 
                             }
@@ -98,12 +96,10 @@ class TblisTTM : public AbstractFunctionInterface{
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
-                                taco::TransferLoad setScalar("tblis_set_tensor_scalar_s", "void");
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
                                 return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(y), 3,  DataArray(y)),
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(z), 2,  DataArray(z)), 
-                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(x), 3, DataArray(x)),
-                                         setScalar(AddrDeclVarArg(result), 0)};
+                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(x), 3, DataArray(x))};
                             }
 
 
@@ -284,13 +280,11 @@ class TblisGemv : public AbstractFunctionInterface{
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
-                                taco::TransferLoad setScalar("tblis_set_tensor_scalar_s", "void");
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
                                 taco::TransferLoad tblis_set_vector("tblis_set_vector", "void");
                                 return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(x), 2,  DataArray(x)),
                                          tblis_set_vector(AddrDeclVarArg(var2), DimList(y), 1,  DataArray(y)), 
-                                         tblis_set_vector(AddrDeclVarArg(result), DimList(z), 1, DataArray(z)),
-                                         setScalar(AddrDeclVarArg(result), 0)
+                                         tblis_set_vector(AddrDeclVarArg(result), DimList(z), 1, DataArray(z))
                                          };
 
                             }
@@ -348,12 +342,10 @@ class TblisTTV : public AbstractFunctionInterface{
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
-                                taco::TransferLoad setScalar("tblis_set_tensor_scalar_s", "void");
                                 taco::TransferLoad init("tblis_init_tensor_s_helper_row_major", "void");
                                 return { init(AddrDeclVarArg(var), DimList(x), 3, DataArray(x)),
                                          init(AddrDeclVarArg(var2), DimList(y), 1, DataArray(y)),
-                                         init(AddrDeclVarArg(result), DimList(z), 2, DataArray(z)),
-                                         setScalar(AddrDeclVarArg(result), 0)};
+                                         init(AddrDeclVarArg(result), DimList(z), 2, DataArray(z))};
                             }
 
 
