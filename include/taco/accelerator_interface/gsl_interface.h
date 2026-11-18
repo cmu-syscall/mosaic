@@ -36,7 +36,6 @@ class GSLVecAdd : public AbstractFunctionInterface{
             };
         }
 
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -78,7 +77,6 @@ class GSLDot : public AbstractFunctionInterface{
                 set_gsl_float_data(b, y)
             };
         }
-
 
     private: 
         TensorObject x;
@@ -130,7 +128,6 @@ class GSLSgemv : public AbstractFunctionInterface{
                 set_gsl_mat_data_row_major_s(mat, x)
             };
         }
-
 
     private: 
         TensorObject x;
@@ -184,7 +181,6 @@ class GSLGemv : public AbstractFunctionInterface{
             };
         }
 
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -237,7 +233,6 @@ class GSLMM : public AbstractFunctionInterface{
                 set_gsl_mat_data_row_major_s(b, z)
             };
         }
-
 
     private: 
         TensorObject x;
@@ -293,7 +288,6 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
                 set_gsl_mat_data_row_major_s(mat, x)
             };
         }
-
 
     private: 
         TensorObject x;
