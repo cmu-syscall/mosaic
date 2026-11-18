@@ -6,8 +6,6 @@
 #include "taco/accelerator_notation/accel_interface.h"
 #include "taco/accelerator_notation/accelerator_notation.h"
 
-using namespace taco;
-
 class TblisMultiply : public AbstractFunctionInterface{
     public: 
         TblisMultiply() : 
@@ -108,11 +106,6 @@ class TblisTTM : public AbstractFunctionInterface{
                                          setScalar(AddrDeclVarArg(result), 0)};
                             }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeTensor("free_tblis_tensor", "void");
-            return {freeTensor(AddrDeclVarArg(var)), freeTensor(AddrDeclVarArg(var2)),
-                    freeTensor(AddrDeclVarArg(result))};
-        }
 
     private: 
         TensorObject x;
@@ -247,10 +240,6 @@ class TblisPlus : public AbstractFunctionInterface{
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(y), 3,  DataArray(y)),};
                             }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeTensor("free_tblis_tensor", "void");
-            return {freeTensor(AddrDeclVarArg(var)), freeTensor(AddrDeclVarArg(var2))};
-        }
 
     private: 
         TensorObject x;
@@ -367,11 +356,6 @@ class TblisTTV : public AbstractFunctionInterface{
                                          setScalar(AddrDeclVarArg(result), 0)};
                             }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeTensor("free_tblis_tensor", "void");
-            return {freeTensor(AddrDeclVarArg(var)), freeTensor(AddrDeclVarArg(var2)),
-                    freeTensor(AddrDeclVarArg(result))};
-        }
 
     private: 
         TensorObject x;

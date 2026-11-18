@@ -36,10 +36,6 @@ class GSLVecAdd : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            return {freeVector(a), freeVector(b)};
-        }
 
     private: 
         TensorObject x;
@@ -83,10 +79,6 @@ class GSLDot : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            return {freeVector(a), freeVector(b)};
-        }
 
     private: 
         TensorObject x;
@@ -139,11 +131,6 @@ class GSLSgemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
 
     private: 
         TensorObject x;
@@ -197,11 +184,6 @@ class GSLGemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
 
     private: 
         TensorObject x;
@@ -256,14 +238,6 @@ class GSLMM : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad gsl_matrix_float_free("gsl_matrix_float_free", "void");
-            return {
-                gsl_matrix_float_free(mat),
-                gsl_matrix_float_free(a),
-                gsl_matrix_float_free(b)
-            };
-        }
 
     private: 
         TensorObject x;
@@ -320,11 +294,6 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
 
     private: 
         TensorObject x;
