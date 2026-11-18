@@ -12,8 +12,8 @@ class GSLVecAdd : public AbstractFunctionInterface{
         GSLVecAdd() : x(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   i(IndexVar()),
-                  a(DeclVar("gsl_vector_float * ")),
-                  b(DeclVar("gsl_vector_float *")) {};
+                  a(DeclVar("gsl_vector_float * ", "a")),
+                  b(DeclVar("gsl_vector_float *", "b")) {};
 
         taco::AcceleratorStmt getStmt() const override{ return x(i) = x(i) + y(i);}
         std::vector<Argument> getArguments() const override {return 
@@ -36,11 +36,6 @@ class GSLVecAdd : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            return {freeVector(a), freeVector(b)};
-        }
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -57,8 +52,8 @@ class GSLDot : public AbstractFunctionInterface{
                   y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   s(TensorObject(Type(taco::Float32))),
                   i(IndexVar()),
-                  a(DeclVar("gsl_vector_float * ")),
-                  b(DeclVar("gsl_vector_float *")) {};
+                  a(DeclVar("gsl_vector_float * ", "a")),
+                  b(DeclVar("gsl_vector_float *", "b")) {};
 
         taco::AcceleratorStmt getStmt() const override{ return s = x(i) * y(i);}
         std::vector<Argument> getArguments() const override {return 
@@ -83,11 +78,6 @@ class GSLDot : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            return {freeVector(a), freeVector(b)};
-        }
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -105,9 +95,9 @@ class GSLSgemv : public AbstractFunctionInterface{
                   s(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   i(IndexVar()),
                   j(IndexVar()),
-                  a(DeclVar("gsl_vector_float * ")),
-                  b(DeclVar("gsl_vector_float *")),
-                  mat(DeclVar("gsl_matrix_float *")) {};
+                  a(DeclVar("gsl_vector_float * ", "var1")),
+                  b(DeclVar("gsl_vector_float *", "var2")),
+                  mat(DeclVar("gsl_matrix_float *", "mat")) {};
         AcceleratorStmt getStmt() const override {return y(i) = x(i, j) * s(j) + y(i);}
         std::vector<Argument> getArguments() const override {return 
                                                 {
@@ -139,12 +129,6 @@ class GSLSgemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -163,9 +147,9 @@ class GSLGemv : public AbstractFunctionInterface{
                   s(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   i(IndexVar()),
                   j(IndexVar()),
-                  a(DeclVar("gsl_vector_float * ")),
-                  b(DeclVar("gsl_vector_float *")),
-                  mat(DeclVar("gsl_matrix_float *")) {};
+                  a(DeclVar("gsl_vector_float * ", "var1")),
+                  b(DeclVar("gsl_vector_float *", "var2")),
+                  mat(DeclVar("gsl_matrix_float *", "mat")) {};
         AcceleratorStmt getStmt() const override {return y(i) = x(i, j) * s(j);}
         std::vector<Argument> getArguments() const override {return 
                                                 {
@@ -197,12 +181,6 @@ class GSLGemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -223,9 +201,9 @@ class GSLMM : public AbstractFunctionInterface{
                   i(IndexVar()),
                   j(IndexVar()),
                   k(IndexVar()),
-                  a(DeclVar("gsl_matrix_float * ")),
-                  b(DeclVar("gsl_matrix_float *")),
-                  mat(DeclVar("gsl_matrix_float *")) {};
+                  a(DeclVar("gsl_matrix_float * ", "var1")),
+                  b(DeclVar("gsl_matrix_float *", "var2")),
+                  mat(DeclVar("gsl_matrix_float *", "mat")) {};
         AcceleratorStmt getStmt() const override {return z(i, k) = x(i, j) *  y(j, k);}
         std::vector<Argument> getArguments() const override {return 
                                                 {
@@ -247,21 +225,12 @@ class GSLMM : public AbstractFunctionInterface{
             taco::TransferLoad set_gsl_mat_data_row_major_s("set_gsl_mat_data_row_major_s", "void");
 
             return {
-                a = gsl_matrix_float_alloc(Dim(j), Dim(k)),
-                b = gsl_matrix_float_alloc(Dim(i), Dim(k)),
-                mat = gsl_matrix_float_alloc(Dim(i), Dim(j)),
+                a = gsl_matrix_float_alloc(Dim(i), Dim(j)),
+                b = gsl_matrix_float_alloc(Dim(j), Dim(k)),
+                mat = gsl_matrix_float_alloc(Dim(i), Dim(k)),
                 set_gsl_mat_data_row_major_s(mat, x),
                 set_gsl_mat_data_row_major_s(a, y),
                 set_gsl_mat_data_row_major_s(b, z)
-            };
-        }
-
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad gsl_matrix_float_free("gsl_matrix_float_free", "void");
-            return {
-                gsl_matrix_float_free(mat),
-                gsl_matrix_float_free(a),
-                gsl_matrix_float_free(b)
             };
         }
 
@@ -285,9 +254,9 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
                   s(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   i(IndexVar()),
                   j(IndexVar()),
-                  a(DeclVar("gsl_vector_float * ")),
-                  b(DeclVar("gsl_vector_float *")),
-                  mat(DeclVar("gsl_matrix_float *")) {};
+                  a(DeclVar("gsl_vector_float * ", "var1")),
+                  b(DeclVar("gsl_vector_float *", "var2")),
+                  mat(DeclVar("gsl_matrix_float *", "mat")) {};
         AcceleratorStmt getStmt() const override {
                                                     return y(i) = x(i, j) * s(j);}
         std::vector<Argument> getArguments() const override {return 
@@ -320,12 +289,6 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
             };
         }
 
-        std::vector<Argument> callAfter() const override {
-            taco::TransferLoad freeVector("gsl_vector_float_free", "void");
-            taco::TransferLoad freeMatrix("gsl_matrix_float_free", "void");
-            return {freeVector(a), freeVector(b), freeMatrix(mat)};
-        }
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -338,4 +301,4 @@ class GSLSymmetricGemv : public AbstractFunctionInterface{
 };
 
 
-#endif
+#endif 

@@ -8,6 +8,7 @@
 
 using namespace taco; 
 
+// works for sqaure!!!
 class MklSgemv : public AbstractFunctionInterface{
     public: 
         MklSgemv() : x(TensorObject(Type(taco::Float32, {Dimension(), Dimension()}), Format{Dense, Dense})), 
@@ -18,8 +19,7 @@ class MklSgemv : public AbstractFunctionInterface{
         AcceleratorStmt getStmt() const override {return y(i) = x(i, j)*s(j);}
         std::vector<Argument> getArguments() const override {return 
                                                 {
-                                                    new DimArg(i),
-                                                    new DimArg(j),
+                                                    new DimArg(i), 
                                                     new TensorObjectArg(x),
                                                     new TensorObjectArg(s),
                                                     new TensorObjectArg(y),
@@ -42,17 +42,17 @@ class SparseMklSgemv : public AbstractFunctionInterface{
                   s(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                   i(IndexVar()),
                   j(IndexVar()),
-                  a(DeclVar("float")),
-                  b(DeclVar("MKL_INT")),
-                  zero(DeclVar("float")),
-                  dim(DeclVar("MKL_INT")) {};
+                  a(DeclVar("float", "var1")),
+                  b(DeclVar("MKL_INT", "var2")),
+                  zero(DeclVar("float", "var4")),
+                  dim(DeclVar("MKL_INT", "var3")) {};
         AcceleratorStmt getStmt() const override {return y(i) = x(i, j)*s(j);}
         std::vector<Argument> getArguments() const override {return 
                                                 {
                                                     new DimArg(i), 
                                                     new TensorName(x),
-                                                    new TensorObjectArg(s),
-                                                    new TensorObjectArg(y),
+                                                    new TensorName(s),
+                                                    new TensorName(y),
                                                 };}
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "mkl_scsrgemv_internal";}
@@ -68,6 +68,7 @@ class SparseMklSgemv : public AbstractFunctionInterface{
         DeclVar dim;
 };
 
+//works on sqaure!!
 class SparseMklMM : public AbstractFunctionInterface{
 public:
     SparseMklMM() : 
@@ -85,7 +86,7 @@ public:
                                                     new DimArg(i), 
                                                     new TensorName(x),
                                                     new TensorName(y),
-                                                    new TensorObjectArg(z),
+                                                    new TensorName(z),
                                                 };}
 
         std::string getReturnType() const override {return "void";}
@@ -138,9 +139,7 @@ public:
         std::vector<Argument> getArguments() const override {
                                                 return 
                                                 {
-                                                    new DimArg(i),
-                                                    new DimArg(k),
-                                                    new DimArg(j),
+                                                    new DimArg(i), 
                                                     new TensorObjectArg(x),
                                                     new TensorObjectArg(y),
                                                     new TensorObjectArg(z),
@@ -211,4 +210,4 @@ class MklAdd : public AbstractFunctionInterface{
         IndexVar j;
 };
 
-#endif
+#endif 
