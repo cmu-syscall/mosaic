@@ -15,9 +15,9 @@ class TblisMultiply : public AbstractFunctionInterface{
                     i(IndexVar()),
                     j(IndexVar()),
                     k(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i, k) = x(i, j) * y(j, k);}
         std::vector<Argument> getArguments() const override {
@@ -36,9 +36,9 @@ class TblisMultiply : public AbstractFunctionInterface{
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
-                                return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(y), 2,  DataArray(x)),
+                                return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(x), 2,  DataArray(x)),
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(y), 2,  DataArray(y)), 
-                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(y), 2, DataArray(z)),
+                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(z), 2, DataArray(z)),
                                          };
 
                             }
@@ -76,9 +76,9 @@ class TblisTTM : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return x(i, j, k) = y(i, j, l) * z(k, l);}
         std::vector<Argument> getArguments() const override {
@@ -99,7 +99,7 @@ class TblisTTM : public AbstractFunctionInterface{
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
                                 return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(y), 3,  DataArray(y)),
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(z), 2,  DataArray(z)), 
-                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(y), 3, DataArray(x))};
+                                         tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(x), 3, DataArray(x))};
                             }
 
     private: 
@@ -122,9 +122,9 @@ class TblisDot : public AbstractFunctionInterface{
                     y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                     s(TensorObject(Type(taco::Float32))),
                     i(IndexVar()),
-                    var(DeclVar("tblis_vector", "var1")),
-                    var2(DeclVar("tblis_vector", "var2")),
-                    result(DeclVar("tblis_scalar", "result")) {};
+                    var(DeclVar("tblis_vector")),
+                    var2(DeclVar("tblis_vector")),
+                    result(DeclVar("tblis_scalar")) {};
 
         AcceleratorStmt getStmt() const override {return s = x(i) * y(i);}
         std::vector<Argument> getArguments() const override {
@@ -168,9 +168,9 @@ class TblisSaxpy : public AbstractFunctionInterface{
                     y(TensorObject(Type(taco::Float32, {Dimension()}), dense)),
                     s(TensorObject(Type(taco::Float32))),
                     i(IndexVar()),
-                    var(DeclVar("tblis_vector", "var1")),
-                    var2(DeclVar("tblis_vector", "var2")),
-                    result(DeclVar("tblis_scalar", "result")) {};
+                    var(DeclVar("tblis_vector")),
+                    var2(DeclVar("tblis_vector")),
+                    result(DeclVar("tblis_scalar")) {};
 
         AcceleratorStmt getStmt() const override {return y(i) = x(i) + y(i);}
         std::vector<Argument> getArguments() const override {
@@ -212,9 +212,9 @@ class TblisPlus : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return x(i, j, k) = y(i, j, k) + x(i, j, k);}
         std::vector<Argument> getArguments() const override {
@@ -231,7 +231,7 @@ class TblisPlus : public AbstractFunctionInterface{
         std::string getFunctionName() const override {return "tblis_tensor_add";}
         std::vector<Argument>  callBefore() const override {
                                 taco::TransferLoad tblis_init_tensor_s_helper_row_major("tblis_init_tensor_s_helper_row_major", "void");
-                                return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(y), 3,  DataArray(x)),
+                                return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(x), 3,  DataArray(x)),
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(y), 3,  DataArray(y)),};
                             }
 
@@ -258,9 +258,9 @@ class TblisGemv : public AbstractFunctionInterface{
                     i(IndexVar()),
                     j(IndexVar()),
                     k(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i) = x(i, j) * y(j);}
         std::vector<Argument> getArguments() const override {
@@ -282,7 +282,7 @@ class TblisGemv : public AbstractFunctionInterface{
                                 taco::TransferLoad tblis_set_vector("tblis_set_vector", "void");
                                 return { tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var), DimList(x), 2,  DataArray(x)),
                                          tblis_set_vector(AddrDeclVarArg(var2), DimList(y), 1,  DataArray(y)), 
-                                         tblis_set_vector(AddrDeclVarArg(result), DimList(y), 1, DataArray(z))
+                                         tblis_set_vector(AddrDeclVarArg(result), DimList(z), 1, DataArray(z))
                                          };
 
                             }
@@ -320,9 +320,9 @@ class TblisTTV : public AbstractFunctionInterface{
                     j(IndexVar()),
                     k(IndexVar()),
                     l(IndexVar()),
-                    var(DeclVar("tblis_tensor", "var1")),
-                    var2(DeclVar("tblis_tensor", "var2")),
-                    result(DeclVar("tblis_tensor", "result")) {};
+                    var(DeclVar("tblis_tensor")),
+                    var2(DeclVar("tblis_tensor")),
+                    result(DeclVar("tblis_tensor")) {};
 
         AcceleratorStmt getStmt() const override {return z(i, j) = x(i, j, k) * y(k);}
         std::vector<Argument> getArguments() const override {
@@ -340,10 +340,10 @@ class TblisTTV : public AbstractFunctionInterface{
         std::string getReturnType() const override {return "void";}
         std::string getFunctionName() const override {return "tblis_tensor_mult";}
         std::vector<Argument>  callBefore() const override {
-                                taco::TransferLoad tblis_init_tensor_s_helper_row_major_dim("tblis_init_tensor_s_helper_row_major_dim", "void");
-                                return { tblis_init_tensor_s_helper_row_major_dim(AddrDeclVarArg(var), Dim(i), 3,  DataArray(y)),
-                                         tblis_init_tensor_s_helper_row_major_dim(AddrDeclVarArg(var2), Dim(i), 1,  DataArray(z)), 
-                                         tblis_init_tensor_s_helper_row_major_dim(AddrDeclVarArg(result), Dim(i), 2, DataArray(x))};
+                                taco::TransferLoad init("tblis_init_tensor_s_helper_row_major", "void");
+                                return { init(AddrDeclVarArg(var), DimList(x), 3, DataArray(x)),
+                                         init(AddrDeclVarArg(var2), DimList(y), 1, DataArray(y)),
+                                         init(AddrDeclVarArg(result), DimList(z), 2, DataArray(z))};
                             }
 
     private: 
@@ -360,5 +360,4 @@ class TblisTTV : public AbstractFunctionInterface{
 
 };
 
-#endif 
-    
+#endif
