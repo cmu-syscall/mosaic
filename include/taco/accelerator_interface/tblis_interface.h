@@ -102,7 +102,6 @@ class TblisTTM : public AbstractFunctionInterface{
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(result), DimList(x), 3, DataArray(x))};
                             }
 
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -236,7 +235,6 @@ class TblisPlus : public AbstractFunctionInterface{
                                          tblis_init_tensor_s_helper_row_major(AddrDeclVarArg(var2), DimList(y), 3,  DataArray(y)),};
                             }
 
-
     private: 
         TensorObject x;
         TensorObject y;
@@ -347,7 +345,6 @@ class TblisTTV : public AbstractFunctionInterface{
                                          init(AddrDeclVarArg(var2), DimList(y), 1, DataArray(y)),
                                          init(AddrDeclVarArg(result), DimList(z), 2, DataArray(z))};
                             }
-
 
     private: 
         TensorObject x;
