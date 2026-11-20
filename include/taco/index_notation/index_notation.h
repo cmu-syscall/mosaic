@@ -615,7 +615,8 @@ public:
   IndexStmt concretizeAccelerated(const std::vector<FunctionInterface>& functionInterface) const;
 
   std::vector<IndexStmt> autoAccelerate(IndexStmt stmt, std::vector<FunctionInterface> functionInterface) const;
-  IndexStmt helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const;
+  /// Return independent single-binding candidates, or the unbound statement if none match.
+  std::vector<IndexStmt> helperCheckForMatches(IndexStmt stmt, std::vector<FunctionInterface> functionInterfaces) const;
 
   /// Takes any index notation and concretizes unknowns to make it concrete notation
   /// given a Provenance Graph of indexVars
